@@ -51,19 +51,19 @@ int entry(int argc, char **argv)
     .exit_with(print_version);
 
   // TODO Add new options!
-  
-  arser.add_argument("--input").nargs(1).type(arser::DataType::STR).help("Input circle model");
-  arser.add_argument("--output").nargs(1).type(arser::DataType::STR).help("Output circle model");
+
+  arser.add_argument("input").nargs(1).type(arser::DataType::STR).help("Input circle model");
+  arser.add_argument("output").nargs(1).type(arser::DataType::STR).help("Output circle model");
 
   // select option
-  arser.add_argument("--by_id")
+  arser.add_argument("--select")
     .nargs(1)
     .type(arser::DataType::STR)
-    .help("Input operation id to select nodes.");
-  arser.add_argument("--by_name")
+    .help("Selecte opeartors from the input circle");
+  arser.add_argument("--deselect")
     .nargs(1)
     .type(arser::DataType::STR)
-    .help("Input operation name to select nodes.");
+    .help("Exclude operators from the input circle");
 
   try
   {
@@ -76,16 +76,15 @@ int entry(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  std::string input_path = arser.get<std::string>("--input");
-  std::string output_path = arser.get<std::string>("--output");
+  std::string input_path = arser.get<std::string>("input");
+  std::string output_path = arser.get<std::string>("output");
 
-  std::string by_id;
-  std::string by_name;
-
-  if(arser["--by_id"])
-    by_id=arser.get<std::string>("--by_id");
-  if(arser["--by_name"])
-    by_name=arser.get<std::string>("--by_name");
+  std::string operators;
+  
+  if (arser["--select"])
+    operators = arser.get<std::string>("--select");
+  if (arser["--deselect"])
+    operators = arser.get<std::string>("--deselect");
 
   // Load model from the file
   foder::FileLoader file_loader{input_path};
@@ -115,18 +114,18 @@ int entry(int argc, char **argv)
 
   // TODO Add new passes!
   passes.emplace_back(std::make_unique<opselector::Function1>());
-  if(by_id.size())
+  if (by_id.size())
   {
-      std::cout<<by_id<<std::endl;
+    std::cout << by_id << std::endl;
   }
-  if(by_name.size())
+  if (by_name.size())
   {
-      std::cout<<by_name<<std::endl;
+    std::cout << by_name << std::endl;
   }
   // Run for each passes
   for (auto &pass : passes)
   {
-    std::cout<<pass->run(module.get())<<std::endl;
+    std::cout << pass->run(module.get()) << std::endl;
   }
 
   // Export to output Circle file

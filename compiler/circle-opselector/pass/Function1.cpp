@@ -17,8 +17,5 @@
 
 namespace opselector
 {
-    bool Function1::run(luci::Module* module)
-    {
-        return false;
-    }
-}
+bool Function1::run(luci::Module *module) { return false; }
+} // namespace opselector

@@ -24,12 +24,12 @@
 namespace opselector
 {
 
-class Function1:public SinglePass
+class Function1 : public SinglePass
 {
 public:
-    virtual bool run(luci::Module *module);
+  virtual bool run(luci::Module *module);
 };
 
-}
+} // namespace opselector
 
 #endif // __CIRCLE_OPSELECTOR_SELECT_PASS__FUNCTION1__
