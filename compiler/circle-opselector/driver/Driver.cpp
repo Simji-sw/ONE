@@ -114,15 +114,11 @@ int entry(int argc, char **argv)
 
   // TODO Add new passes!
   passes.emplace_back(std::make_unique<opselector::Function1>());
-  if (by_id.size())
+  if (operators.size())
   {
-    std::cout << by_id << std::endl;
+    std::cout << operators << std::endl;
   }
-  if (by_name.size())
-  {
-    std::cout << by_name << std::endl;
-  }
-  // Run for each passes
+    // Run for each passes
   for (auto &pass : passes)
   {
     std::cout << pass->run(module.get()) << std::endl;
