@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#include "SinglePass.h"
-#include "Function1.h"
+#include "OpSelector.h"
 // TODO Add new pass headers
 
 #include <foder/FileLoader.h>
@@ -37,68 +36,56 @@ void print_version(void)
   std::cout << vconone::get_copyright() << std::endl;
 }
 
-void split_id_input(const std::string &str, std::vector<int> &by_id)
+bool check_input(std::string str)
 {
-  int input_length = str.length();
-  int first = 0, last = 0;
-  bool is_range = false;
-  
-  for(int cur = 0; cur < input_length; cur++)
+  bool check_hyphen = false;
+
+  for (char c : str)
   {
-    switch(str[cur])
+    if ('0' <= c && c <= '9')
+      continue;
+    else if (check_hyphen) // when user enter '-' more than 2.
     {
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        // a to i
-        if(!is_range)
-        {
-          first *= 10;
-          first += str[cur] - '0';
-        }
-        else
-        {
-          last *= 10;
-          last += str[cur] - '0';
-        }
-        break;
-
-      case '-':
-        // range expression like '1-3', which means '1,2,3'
-        if(is_range) // if '-' exist in splited token more than 1
-        {
-          std::cout << "Too many '-' in str." << std::endl;  
-          exit(0);
-        }
-        is_range = true;
-        break;
-
-      case ',':
-        // split by ','
-        by_id.push_back(first++);
-        while(first <= last)    // if there exist range expression, exec while loop.
-          by_id.push_back(first++);
-
-        first = last = 0;
-        is_range = false;
-        break;
-        
-      default:
-        // when input not allowed character, print alert msg.
-        std::cout << "To select operator by id, please use these params: [0-9], '-', ','" << std::endl;
-        exit(0);
+      std::cout << "Too many '-' in str." << std::endl;
+      exit(0);
+    }
+    else if (c == '-')
+      check_hyphen = true;
+    else // when user enter not allowed character, print alert msg.
+    {
+      std::cout << "To select operator by id, please use these args: [0-9], '-', ','" << std::endl;
+      exit(0);
     }
   }
-  by_id.push_back(first++);
-  while(first <= last)
-    by_id.push_back(first++);
+  return true;
+}
+
+void split_id_input(const std::string &str, std::vector<int> &by_id)
+{
+  std::istringstream ss;
+  ss.str(str);
+  std::string str_buf;
+
+  while (getline(ss, str_buf, ','))
+  {
+    if (str_buf.length() && check_input(str_buf)) // input validation
+    {
+      if (str_buf.find('-') == std::string::npos) // if token has no '-'
+        by_id.push_back(stoi(str_buf));
+      else // tokenize again by '-'
+      {
+        std::istringstream ss2(str_buf);
+        std::string token;
+        int from_to[2], top = 0;
+
+        while (getline(ss2, token, '-'))
+          from_to[top++] = stoi(token);
+
+        for (int number = from_to[0]; number <= from_to[1]; number++)
+          by_id.push_back(number);
+      }
+    }
+  }
 }
 
 void split_name_input(const std::string &str, std::vector<std::string> &by_name)
@@ -107,7 +94,7 @@ void split_name_input(const std::string &str, std::vector<std::string> &by_name)
   ss.str(str);
   std::string str_buf;
 
-  while(getline(ss, str_buf, ','))
+  while (getline(ss, str_buf, ','))
     by_name.push_back(str_buf);
 }
 
@@ -125,7 +112,7 @@ int entry(int argc, char **argv)
     .exit_with(print_version);
 
   // TODO Add new options!
-  
+
   arser.add_argument("--input").nargs(1).type(arser::DataType::STR).help("Input circle model");
   arser.add_argument("--output").nargs(1).type(arser::DataType::STR).help("Output circle model");
 
@@ -158,23 +145,23 @@ int entry(int argc, char **argv)
   std::vector<int> by_id;
   std::vector<std::string> by_name;
 
-  if(arser["--by_id"])
+  if (arser["--by_id"])
   {
-    operator_input=arser.get<std::string>("--by_id");
+    operator_input = arser.get<std::string>("--by_id");
     split_id_input(operator_input, by_id);
   }
-  if(arser["--by_name"])
+  if (arser["--by_name"])
   {
-    operator_input=arser.get<std::string>("--by_name");
+    operator_input = arser.get<std::string>("--by_name");
     split_name_input(operator_input, by_name);
   }
 
   // option parsing test code.
-  for(int x: by_id)
-    std::cout<<"by_id: "<< x << std::endl;
+  for (int x : by_id)
+    std::cout << "by_id: " << x << std::endl;
 
-  for(std::string line: by_name)
-    std::cout<<"by_name: "<<line<<std::endl;
+  for (std::string line : by_name)
+    std::cout << "by_name: " << line << std::endl;
 
   // Load model from the file
   foder::FileLoader file_loader{input_path};
@@ -199,25 +186,36 @@ int entry(int argc, char **argv)
   luci::Importer importer;
   auto module = importer.importModule(circle_model);
 
-  // Enable each pass
-  std::vector<std::unique_ptr<opselector::SinglePass>> passes;
-
-  // TODO Add new passes!
-  passes.emplace_back(std::make_unique<opselector::Function1>());
-
-  // Add pass later
-  if(by_id.size())
+  // TODO Add function
+  if (by_id.size())
   {
-      
+    std::cout<<"input: "<<module.get()->graph()->inputs()->at(0)->name()<<std::endl;
+    std::cout<<"module.size(number of subgraph): "<<module.get()->size()<<std::endl;
+    std::cout<<"module.graph.nodes.size(number of operator): "<<module.get()->graph()->nodes()->size()<<std::endl;
+    std::map<uint32_t, std::string> _source_table = module.get()->source_table();
+    /*std::cout<<"map Content::"<<std::endl;
+    for(int i=2; i<8; i++)
+    {
+      _source_table.erase(i);
+    }
+    module.get()->source_table(_source_table);
+     _source_table=module.get()->source_table();*/
+    for(auto iter=_source_table.begin();iter!=_source_table.end();iter++)
+      std::cout<<iter->first<<" "<<iter->second<<std::endl;
   }
-  if(by_name.size())
+  if (by_name.size())
   {
-      
-  }
-  // Run for each passes
-  for (auto &pass : passes)
-  {
-    std::cout<<pass->run(module.get())<<std::endl;
+    opselector::OpSelector *selector = new opselector::OpSelector();
+    std::map<uint32_t, std::string> _source_table = module.get()->source_table();
+    std::vector<std::string> named_output;
+    for(auto name : by_name) // find
+    {
+      for(auto iter=_source_table.begin();iter!=_source_table.end();iter++)
+        if(iter->second.find(name)!= std::string::npos)
+            named_output.push_back(iter->second);
+    }
+    
+    selector->select_nodes_by_name(module.get(), named_output);
   }
 
   // Export to output Circle file

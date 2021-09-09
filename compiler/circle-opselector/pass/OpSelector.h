@@ -13,13 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "Function1.h"
+
+#ifndef __CIRCLE_OPSELECTOR_SELECT_PASS__FUNCTION1__
+#define __CIRCLE_OPSELECTOR_SELECT_PASS__FUNCTION1__
+
+#include <luci/IR/Module.h>
 
 namespace opselector
 {
-    bool Function1::run(luci::Module* module)
-    {
-        return false;
-    }
-}
 
+class OpSelector
+{
+public:
+  ~OpSelector() = default;
+public:
+  virtual bool select_nodes_by_name(luci::Module *module, const std::vector<std::string> &by_name);
+};
+
+} // namespace opselector
+
+#endif // __CIRCLE_OPSELECTOR_SELECT_PASS__FUNCTION1__
